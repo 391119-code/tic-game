@@ -54,4 +54,52 @@ button {
 
 button:hover {
   background-color: #0056b3;
+}/* --- CP03: Game Board Styles --- */
+#game-section {
+  margin-top: 20px;
+}
+
+#turn-indicator {
+  margin-bottom: 15px;
+}
+
+.board {
+  display: grid;
+  grid-template-columns: repeat(3, 100px);
+  grid-template-rows: repeat(3, 100px);
+  gap: 5px;
+  justify-content: center;
+  margin: 20px auto;
+}
+
+.cell {
+  background-color: #f9f9f9;
+  border: 2px solid #333;
+  font-size: 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none; /* Prevents text highlighting when clicking fast */
+  border-radius: 5px;
+}
+
+.cell:hover {
+  background-color: #e0e0e0;
+}
+
+/* Make unclickable cells look inactive */
+.cell.taken {
+  cursor: not-allowed;
+  background-color: #eaeaea;
+  color: #555;
+}
+
+#reset-btn {
+  margin-top: 20px;
+  background-color: #dc3545;
+}
+
+#reset-btn:hover {
+  background-color: #c82333;
 }
