@@ -4,6 +4,9 @@ const turnIndicator = document.getElementById("turn-indicator");
 const resetBtn = document.getElementById("reset-btn");
 const authSection = document.getElementById("auth-section");
 const gameSection = document.getElementById("game-section");
+const historyBtn = document.getElementById("history-btn");
+const historySection = document.getElementById("history-section");
+const historyList = document.getElementById("history-list");
 
 let board = ["", "", "", "", "", "", "", "", ""];
 let currentPlayer = "X";
@@ -59,17 +62,18 @@ function checkResult() {
             break;
         }
     }
-
-    if (roundWon) {
-        turnIndicator.innerText = `Player ${currentPlayer} Wins! 🎉`;
-        gameActive = false;
-        return;
+        if (roundWon) {
+            turnIndicator.innerText = `Player ${currentPlayer} Wins! 🎉`;
+            gameActive = false;
+            saveGame(`Player ${currentPlayer} Wins`); // <-- ADDED THIS LINE
+            return;
     }
 
     // Check for a draw (no empty strings left in the board array)
     if (!board.includes("")) {
         turnIndicator.innerText = "It's a Draw! 🤝";
         gameActive = false;
+        saveGame("Draw"); // <-- ADDED THIS LINE
         return;
     }
 
@@ -94,6 +98,68 @@ function showGame() {
     if (authSection) authSection.style.display = "none";
     if (gameSection) gameSection.style.display = "block";
     initGame();
+}
+// --- CP05: Save and Load History ---
+async function saveGame(result) {
+    const gameData = {
+        board: board,
+        result: result
+    };
+
+    try {
+        await fetch('/api/games', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(gameData)
+        });
+
+        // Refresh the list immediately if the history panel is currently open
+        if (historySection && historySection.style.display === "block") {
+            loadHistory();
+        }
+    } catch (error) {
+        console.error("Failed to save game:", error);
+    }
+}
+
+async function loadHistory() {
+    try {
+        const response = await fetch('/api/games');
+        const games = await response.json();
+
+        historyList.innerHTML = ""; // Clear out the old list
+
+        if (games.length === 0) {
+            historyList.innerHTML = "<li>No games played yet.</li>";
+            return;
+        }
+
+        // Loop backwards so the newest games show up at the top
+        for (let i = games.length - 1; i >= 0; i--) {
+            const game = games[i];
+            const li = document.createElement("li");
+            const dateStr = new Date(game.createdAt).toLocaleString();
+
+            li.style.borderBottom = "1px solid #ccc";
+            li.style.padding = "5px 0";
+            li.innerText = `${dateStr} - Result: ${game.result}`;
+
+            historyList.appendChild(li);
+        }
+    } catch (error) {
+        console.error("Failed to load history:", error);
+    }
+}
+
+if (historyBtn) {
+    historyBtn.addEventListener("click", () => {
+        if (historySection.style.display === "none") {
+            historySection.style.display = "block";
+            loadHistory(); // Fetch the games when opening the menu
+        } else {
+            historySection.style.display = "none";
+        }
+    });
 }
 // --- Auth Form Handlers ---
 document.getElementById("register-form").addEventListener("submit", (event) => {
