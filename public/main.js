@@ -11,6 +11,8 @@ const historyList = document.getElementById("history-list");
 let board = ["", "", "", "", "", "", "", "", ""];
 let currentPlayer = "X";
 let gameActive = true;
+let gameMode = "PvAI"; // Default to PvAI
+let isAIThinking = false; // Prevent multiple AI moves
 
 // Add this right below: let gameActive = true;
 const winningConditions = [
@@ -24,31 +26,38 @@ const winningConditions = [
     [2, 4, 6]  // Diagonal 2
 ];
 function initGame() {
-    boardElement.innerHTML = ""; 
+    boardElement.innerHTML = "";
+    isAIThinking = false; // Reset AI thinking state
     board.forEach((cell, index) => {
         const cellElement = document.createElement("div");
         cellElement.classList.add("cell");
-        cellElement.dataset.index = index; 
+        cellElement.dataset.index = index;
         cellElement.innerText = cell;
         cellElement.addEventListener("click", handleCellClick);
         boardElement.appendChild(cellElement);
     });
     updateTurnIndicator();
 }
-
 function handleCellClick(event) {
+    if (isAIThinking || !gameActive) return; // Ignore clicks while AI is thinking
+
     const clickedCell = event.target;
     const cellIndex = clickedCell.dataset.index;
 
-    // Ignore click if the cell is full or game is over
-    if (board[cellIndex] !== "" || !gameActive) return; 
+    if (board[cellIndex] !== "") return;
 
-    // ... inside handleCellClick
-        board[cellIndex] = currentPlayer;
-        clickedCell.innerText = currentPlayer;
-        clickedCell.classList.add("taken");
+    // Human move
+    board[cellIndex] = currentPlayer;
+    clickedCell.innerText = currentPlayer;
+    clickedCell.classList.add("taken");
 
-        checkResult();
+    checkResult();
+
+    // If game is still active and it's AI's turn in PvAI mode
+    if (gameActive && gameMode === "PvAI" && currentPlayer === "O") {
+        isAIThinking = true;
+        setTimeout(makeAIMove, 500); // Delay for UX
+    }
 }
 function checkResult() {
     let roundWon = false;
@@ -84,20 +93,89 @@ function checkResult() {
 function updateTurnIndicator() {
     turnIndicator.innerText = `Player ${currentPlayer}'s Turn`;
 }
-
 if (resetBtn) {
-    resetBtn.addEventListener("click", () => {
-        board = ["", "", "", "", "", "", "", "", ""];
-        currentPlayer = "X";
-        gameActive = true;
-        initGame();
-    });
+    resetBtn.addEventListener("click", resetGame);
 }
 
 function showGame() {
     if (authSection) authSection.style.display = "none";
     if (gameSection) gameSection.style.display = "block";
     initGame();
+}
+// --- AI Logic ---
+function makeAIMove() {
+    if (!gameActive) {
+        isAIThinking = false;
+        return;
+    }
+
+    const bestMove = findBestMove(board);
+    if (bestMove !== null) {
+        board[bestMove] = "O";
+        const cells = document.querySelectorAll(".cell");
+        cells[bestMove].innerText = "O";
+        cells[bestMove].classList.add("taken");
+        checkResult();
+    }
+    isAIThinking = false;
+}
+
+function findBestMove(board) {
+    let bestScore = -Infinity;
+    let bestMove = null;
+
+    for (let i = 0; i < board.length; i++) {
+        if (board[i] === "") {
+            board[i] = "O";
+            let score = minimax(board, 0, false);
+            board[i] = "";
+            if (score > bestScore) {
+                bestScore = score;
+                bestMove = i;
+            }
+        }
+    }
+    return bestMove;
+}
+
+function minimax(board, depth, isMaximizing) {
+    if (checkWin(board, "O")) return 10 - depth;
+    if (checkWin(board, "X")) return depth - 10;
+    if (board.every(cell => cell !== "")) return 0;
+
+    if (isMaximizing) {
+        let bestScore = -Infinity;
+        for (let i = 0; i < board.length; i++) {
+            if (board[i] === "") {
+                board[i] = "O";
+                let score = minimax(board, depth + 1, false);
+                board[i] = "";
+                bestScore = Math.max(score, bestScore);
+            }
+        }
+        return bestScore;
+    } else {
+        let bestScore = Infinity;
+        for (let i = 0; i < board.length; i++) {
+            if (board[i] === "") {
+                board[i] = "X";
+                let score = minimax(board, depth + 1, true);
+                board[i] = "";
+                bestScore = Math.min(score, bestScore);
+            }
+        }
+        return bestScore;
+    }
+}
+
+function checkWin(board, player) {
+    for (const condition of winningConditions) {
+        const [a, b, c] = condition;
+        if (board[a] === player && board[b] === player && board[c] === player) {
+            return true;
+        }
+    }
+    return false;
 }
 // --- CP05: Save and Load History ---
 async function saveGame(result) {
@@ -160,6 +238,22 @@ if (historyBtn) {
             historySection.style.display = "none";
         }
     });
+}
+// --- Game Mode Toggle ---
+function toggleGameMode() {
+    gameMode = document.getElementById("ai-toggle").checked ? "PvAI" : "PvP";
+    resetGame();
+}
+
+function resetGame() {
+    board = ["", "", "", "", "", "", "", "", ""];
+    currentPlayer = "X";
+    gameActive = true;
+    isAIThinking = false;
+    initGame();
+}
+if (document.getElementById("ai-toggle")) {
+    document.getElementById("ai-toggle").addEventListener("change", toggleGameMode);
 }
 // --- Auth Form Handlers ---
 document.getElementById("register-form").addEventListener("submit", (event) => {
