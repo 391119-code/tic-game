@@ -58,9 +58,16 @@ function getDifficultyOptions() {
   }));
 }
 
+// Function to get AI logic for a given difficulty
+function getAILogic(difficulty) {
+  const level = difficultyLevels[difficulty];
+  return level ? level.aiLogic : "random";
+}
+
 // Export for use in other modules
 module.exports = {
   difficultyLevels,
   getVibeComment,
   getDifficultyOptions,
+  getAILogic,
 };
