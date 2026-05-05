@@ -32,10 +32,16 @@
     </div>
     <div id="game-section" style="display: none;">
             <h2 id="turn-indicator">Player X's Turn</h2>
+            <div id="vibe-comment" style="font-style: italic; color: #666; margin: 10px 0;"></div>
         <div class="game-mode-toggle">
             <label>
                 <input type="checkbox" id="ai-toggle" checked>
                 <span>Play vs AI</span>
+            </label>
+            <label style="margin-left: 20px;">
+                <span>Difficulty: </span>
+                <select id="difficulty-select">
+                </select>
             </label>
         </div>
             <div id="board" class="board">
