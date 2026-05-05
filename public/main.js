@@ -7,14 +7,16 @@ const gameSection = document.getElementById("game-section");
 const historyBtn = document.getElementById("history-btn");
 const historySection = document.getElementById("history-section");
 const historyList = document.getElementById("history-list");
+const difficultySelect = document.getElementById("difficulty-select");
 
 let board = ["", "", "", "", "", "", "", "", ""];
 let currentPlayer = "X";
 let gameActive = true;
 let gameMode = "PvAI"; // Default to PvAI
 let isAIThinking = false; // Prevent multiple AI moves
+let currentDifficulty = "medium"; // Default difficulty
 
-// Add this right below: let gameActive = true;
+// Winning conditions
 const winningConditions = [
     [0, 1, 2], // Top row
     [3, 4, 5], // Middle row
@@ -25,6 +27,54 @@ const winningConditions = [
     [0, 4, 8], // Diagonal 1
     [2, 4, 6]  // Diagonal 2
 ];
+
+// Difficulty levels and vibe comments
+const difficultyLevels = {
+  easy: {
+    name: "Easy",
+    description: "The AI makes random moves. Perfect for beginners!",
+    vibeComments: [
+      "Easy mode: Let's take it slow!",
+      "I'm just here for fun. Your move!",
+      "No pressure, just vibes!",
+      "I might miss a win, but I'll still have fun!",
+      "Easy does it!",
+    ],
+    aiLogic: "random",
+  },
+  medium: {
+    name: "Medium",
+    description: "The AI plays smart but makes occasional mistakes.",
+    vibeComments: [
+      "Medium mode: Let's see what you've got!",
+      "I'll try my best, but I might slip up!",
+      "This should be a fair challenge!",
+      "I'll block you... sometimes.",
+      "Medium difficulty: Bring it on!",
+    ],
+    aiLogic: "intermediate",
+  },
+  hard: {
+    name: "Hard",
+    description: "The AI is unbeatable. Good luck!",
+    vibeComments: [
+      "Hard mode: Prepare for a challenge!",
+      "I see all your moves. Do you see mine?",
+      "Unbeatable? Let's find out!",
+      "Every move counts. No mistakes here!",
+      "Hard difficulty: Can you outsmart me?",
+    ],
+    aiLogic: "unbeatable",
+  },
+};
+
+function getVibeComment(difficulty) {
+  const level = difficultyLevels[difficulty];
+  if (!level) return "Let's play!";
+  const comments = level.vibeComments;
+  return comments[Math.floor(Math.random() * comments.length)];
+}
+
 function initGame() {
     boardElement.innerHTML = "";
     isAIThinking = false; // Reset AI thinking state
@@ -37,7 +87,16 @@ function initGame() {
         boardElement.appendChild(cellElement);
     });
     updateTurnIndicator();
+    
+    // Display vibe comment for AI games
+    if (gameMode === "PvAI") {
+      const vibeElement = document.getElementById("vibe-comment");
+      if (vibeElement) {
+        vibeElement.textContent = getVibeComment(currentDifficulty);
+      }
+    }
 }
+
 function handleCellClick(event) {
     if (isAIThinking || !gameActive) return; // Ignore clicks while AI is thinking
 
@@ -59,6 +118,7 @@ function handleCellClick(event) {
         setTimeout(makeAIMove, 500); // Delay for UX
     }
 }
+
 function checkResult() {
     let roundWon = false;
 
@@ -71,18 +131,18 @@ function checkResult() {
             break;
         }
     }
-        if (roundWon) {
-            turnIndicator.innerText = `Player ${currentPlayer} Wins! 🎉`;
-            gameActive = false;
-            saveGame(`Player ${currentPlayer} Wins`); // <-- ADDED THIS LINE
-            return;
+    if (roundWon) {
+        turnIndicator.innerText = `Player ${currentPlayer} Wins! 🎉`;
+        gameActive = false;
+        saveGame(`Player ${currentPlayer} Wins`);
+        return;
     }
 
     // Check for a draw (no empty strings left in the board array)
     if (!board.includes("")) {
         turnIndicator.innerText = "It's a Draw! 🤝";
         gameActive = false;
-        saveGame("Draw"); // <-- ADDED THIS LINE
+        saveGame("Draw");
         return;
     }
 
@@ -90,9 +150,11 @@ function checkResult() {
     currentPlayer = currentPlayer === "X" ? "O" : "X";
     updateTurnIndicator();
 }
+
 function updateTurnIndicator() {
     turnIndicator.innerText = `Player ${currentPlayer}'s Turn`;
 }
+
 if (resetBtn) {
     resetBtn.addEventListener("click", resetGame);
 }
@@ -102,6 +164,7 @@ function showGame() {
     if (gameSection) gameSection.style.display = "block";
     initGame();
 }
+
 // --- AI Logic ---
 function makeAIMove() {
     if (!gameActive) {
@@ -109,15 +172,76 @@ function makeAIMove() {
         return;
     }
 
-    const bestMove = findBestMove(board);
-    if (bestMove !== null) {
+    let bestMove;
+    switch (currentDifficulty) {
+        case "easy":
+            bestMove = findRandomMove();
+            break;
+        case "medium":
+            // 70% chance to make a smart move, 30% chance to make a random move
+            bestMove = Math.random() < 0.7 ? findIntermediateMove() : findRandomMove();
+            break;
+        case "hard":
+            bestMove = findBestMove(board);
+            break;
+        default:
+            bestMove = findBestMove(board);
+    }
+
+    if (bestMove !== null && bestMove !== undefined) {
         board[bestMove] = "O";
         const cells = document.querySelectorAll(".cell");
         cells[bestMove].innerText = "O";
         cells[bestMove].classList.add("taken");
+        
+        // Display a new vibe comment after AI move
+        const vibeElement = document.getElementById("vibe-comment");
+        if (vibeElement) {
+            vibeElement.textContent = getVibeComment(currentDifficulty);
+        }
+        
         checkResult();
     }
     isAIThinking = false;
+}
+
+function findRandomMove() {
+    const availableMoves = [];
+    for (let i = 0; i < board.length; i++) {
+        if (board[i] === "") availableMoves.push(i);
+    }
+    return availableMoves.length > 0 
+        ? availableMoves[Math.floor(Math.random() * availableMoves.length)]
+        : null;
+}
+
+function findIntermediateMove() {
+    // First, check for winning move
+    for (let i = 0; i < board.length; i++) {
+        if (board[i] === "") {
+            board[i] = "O";
+            if (checkWin(board, "O")) {
+                board[i] = "";
+                return i;
+            }
+            board[i] = "";
+        }
+    }
+    
+    // Then, block opponent's winning move
+    for (let i = 0; i < board.length; i++) {
+        if (board[i] === "") {
+            board[i] = "X";
+            if (checkWin(board, "X")) {
+                board[i] = "";
+                return i;
+            }
+            board[i] = "";
+        }
+    }
+    
+    // If no immediate win or block, make a random move
+    return findRandomMove();
 }
 
 function findBestMove(board) {
@@ -177,11 +301,14 @@ function checkWin(board, player) {
     }
     return false;
 }
+
 // --- CP05: Save and Load History ---
 async function saveGame(result) {
     const gameData = {
         board: board,
-        result: result
+        result: result,
+        difficulty: currentDifficulty,
+        gameMode: gameMode
     };
 
     try {
@@ -220,7 +347,7 @@ async function loadHistory() {
 
             li.style.borderBottom = "1px solid #ccc";
             li.style.padding = "5px 0";
-            li.innerText = `${dateStr} - Result: ${game.result}`;
+            li.innerText = `${dateStr} - Result: ${game.result} ${game.difficulty ? `(Difficulty: ${game.difficulty})` : ''}`;
 
             historyList.appendChild(li);
         }
@@ -239,10 +366,18 @@ if (historyBtn) {
         }
     });
 }
-// --- Game Mode Toggle ---
+
+// --- Game Mode and Difficulty Toggle ---
 function toggleGameMode() {
     gameMode = document.getElementById("ai-toggle").checked ? "PvAI" : "PvP";
     resetGame();
+}
+
+function setDifficulty() {
+    if (difficultySelect) {
+        currentDifficulty = difficultySelect.value;
+        resetGame();
+    }
 }
 
 function resetGame() {
@@ -252,24 +387,33 @@ function resetGame() {
     isAIThinking = false;
     initGame();
 }
+
 if (document.getElementById("ai-toggle")) {
     document.getElementById("ai-toggle").addEventListener("change", toggleGameMode);
 }
+
+if (difficultySelect) {
+    difficultySelect.addEventListener("change", setDifficulty);
+}
+
+// Initialize difficulty selector
+if (difficultySelect) {
+    Object.keys(difficultyLevels).forEach(difficulty => {
+        const option = document.createElement("option");
+        option.value = difficulty;
+        option.textContent = difficultyLevels[difficulty].name;
+        difficultySelect.appendChild(option);
+    });
+    difficultySelect.value = currentDifficulty;
+}
+
 // --- Auth Form Handlers ---
 document.getElementById("register-form").addEventListener("submit", (event) => {
     event.preventDefault(); // Prevents the page from refreshing
-
-    // TODO: Send registration data to your backend here
-
-    // Transition to the game screen
     showGame();
 });
 
 document.getElementById("login-form").addEventListener("submit", (event) => {
     event.preventDefault(); // Prevents the page from refreshing
-
-    // TODO: Verify login data with your backend here
-
-    // Transition to the game screen
     showGame();
 });
