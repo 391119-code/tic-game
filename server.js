@@ -1,6 +1,7 @@
 const express = require("express");
 const fs = require("fs");
 const path = require("path");
+const { difficultyLevels, getVibeComment, getDifficultyOptions, getAILogic } = require("./cp07-levels");
 
 const app = express();
 const PORT = process.env.PORT || 8080;
@@ -43,6 +44,27 @@ function writeJSON(file, data) {
 // Health check
 app.get("/api/healthz", (req, res) => {
   res.json({ status: "ok" });
+});
+
+// --- CP07: Difficulty Levels and Vibe Comments ---
+app.get("/api/difficulty-levels", (req, res) => {
+  res.json(difficultyLevels);
+});
+
+app.get("/api/difficulty-levels/options", (req, res) => {
+  res.json(getDifficultyOptions());
+});
+
+app.get("/api/difficulty-levels/vibe-comment", (req, res) => {
+  const { difficulty } = req.query;
+  const comment = getVibeComment(difficulty);
+  res.json({ comment });
+});
+
+app.get("/api/difficulty-levels/ai-logic", (req, res) => {
+  const { difficulty } = req.query;
+  const logic = getAILogic(difficulty);
+  res.json({ logic });
 });
 
 // --- Games routes ---
@@ -123,7 +145,7 @@ app.delete("/api/users/:id", (req, res) => {
 
 // Root response
 app.get("/", (req, res) => {
-  res.json({ message: "Server is running!", endpoints: ["/api/healthz", "/api/games", "/api/users"] });
+  res.json({ message: "Server is running!", endpoints: ["/api/healthz", "/api/games", "/api/users", "/api/difficulty-levels"] });
 });
 
 app.listen(PORT, "0.0.0.0", () => {
